@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>28x28 Drawing Grid</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+            margin: 0;
+            flex-direction: column;
+        }
+        table {
+            border-collapse: collapse;
+            background-color: white;
+        }
+        td {
+            width: 20px;
+            height: 20px;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            display: flex;
+            gap: 100px;
+        }
+        button {
+            padding: 10px 20px;
+            border: 2px solid #00ff00;
+            background-color: black;
+            color: #00ff00;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="button-row">
+        <div class="button-container">
+            <button id="return-home-button">Return Home</button>
+            <button id="clear-button">Clear</button>
+            <button id="submit-button">Submit</button>
+        </div>
+    </div>
+    <div id="grid-container"></div>
+    <div id="prediction-result" style="color: #00ff00; margin-top: 20px;"></div>
+
+    <script>
+        function createGrid(rows, cols) {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = ''; // Clear any existing grid
+            const table = document.createElement('table');
+
+            for (let i = 0; i < rows; i++) {
+                const tr = document.createElement('tr');
+                for (let j = 0; j < cols; j++) {
+                    const td = document.createElement('td');
+                    td.style.backgroundColor = 'white'; // Set default background color
+                    td.addEventListener('mousedown', () => colorBlock(i, j, rows, cols));
+                    td.addEventListener('mouseover', (event) => {
+                        if (event.buttons === 1) {
+                            colorBlock(i, j, rows, cols);
+                        }
+                    });
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+
+            container.appendChild(table);
+        }
+
+        function colorBlock(i, j, rows, cols) {
+            for (let di = -1; di <= 1; di++) {
+                for (let dj = -1; dj <= 1; dj++) {
+                    const ni = i + di;
+                    const nj = j + dj;
+                    if (ni >= 0 && ni < rows && nj >= 0 && nj < cols) {
+                        const cell = document.querySelector(`tr:nth-child(${ni + 1}) td:nth-child(${nj + 1})`);
+                        if (cell) {
+                            cell.style.backgroundColor = 'black';
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearGrid() {
+            const cells = document.querySelectorAll('td');
+            cells.forEach(cell => {
+                cell.style.backgroundColor = 'white';
+            });
+        }
+
+        function getGridData() {
+            const cells = document.querySelectorAll('td');
+            const pixels = [];
+            cells.forEach(cell => {
+                const color = cell.style.backgroundColor;
+                if (color === 'black') {
+                    pixels.push(0);
+                } else if (color === 'white') {
+                    pixels.push(255);
+                } else {
+                    pixels.push(255);
+                }
+            });
+            return pixels;
+        }
+
+        async function submitGrid() {
+            const pixels = getGridData();
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ pixels })
+            });
+            const result = await response.json();
+            document.getElementById('prediction-result').innerText = 'Predicted Digit: ' + result.digit;
+        }
+
+        document.getElementById('clear-button').addEventListener('click', clearGrid);
+        document.getElementById('submit-button').addEventListener('click', submitGrid);
+
+        // Create a 28x28 grid
+        createGrid(28, 28);
+
+        // Prevent default drag behavior for better drawing experience
+        document.body.addEventListener('dragstart', (event) => {
+            event.preventDefault();
+        });
+
+        // Prevent default text selection while drawing
+        document.body.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+        });
+    </script>
+</body>
+</html>
